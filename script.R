@@ -64,7 +64,8 @@ ggplot(paso_df)+
 geo_levels <- 
   list(
     c('distrito', 'cargo', 'color', 'id_seccion'),
-    c('distrito', 'cargo', 'color', 'id_seccion', 'id_circuito')
+    c('distrito', 'cargo', 'color', 'id_seccion', 'id_circuito'),
+    c('distrito', 'cargo', 'color', 'id_seccion', 'id_circuito', 'establecimiento')
   )
 
 
@@ -75,9 +76,6 @@ geo_thresholds <- map(geo_levels, ~
               qhigh = quantile(prop_votos, .98)) %>% 
     ungroup()
 )
-
-geo_thresholds[[1]] %>% names()
-geo_thresholds[[2]] %>% names()
 
 
 # add outlier flags
@@ -96,15 +94,26 @@ paso_out <- paso_df %>%
     outlier_h_circuito = if_else(prop_votos > qhigh, 1, 0),
     outlier_l_circuito = if_else(prop_votos < qlow, 1, 0),
     outlier_circuito = if_else(outlier_h_circuito == 1 |
-                                outlier_l_circuito == 1, 1, 0),
+                                outlier_l_circuito == 1, 1, 0)) %>% 
+  select(-qhigh, -qlow) %>% 
+  left_join(geo_thresholds[[3]])   %>% 
+  mutate(
+    outlier_h_est = if_else(prop_votos > qhigh, 1, 0),
+    outlier_l_est = if_else(prop_votos < qlow, 1, 0),
+    outlier_est = if_else(outlier_h_est == 1 |
+                            outlier_l_est == 1, 1, 0),
     outlier_tot_h = if_else(outlier_h_circuito == 1 |
-                              outlier_h_seccion == 1, 1, 0),
+                              outlier_h_seccion == 1 |
+                              outlier_h_est == 1, 1, 0),
     outlier_tot_l = if_else(outlier_l_circuito == 1 |
-                              outlier_l_seccion == 1, 1, 0),
+                              outlier_l_seccion == 1 |
+                              outlier_l_est, 1, 0),
     outlier_tot = if_else(outlier_tot_h == 1 |
                             outlier_tot_l == 1, 1, 0)
   ) %>% 
   select(-qhigh, -qlow) 
+  
+
 
 
 write_csv(paso_out, 'out/paso_out.csv')
